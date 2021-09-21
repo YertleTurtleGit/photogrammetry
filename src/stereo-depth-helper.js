@@ -53,21 +53,32 @@ class StereoDepthHelper {
                y - needleChunkSize / 2
             );
 
+            let redDifference = new GLSL.Float(needleChunk[index + 0] / 255);
+            redDifference = redDifference
+               .subtractFloat(haystackPixelColor.channel(0))
+               .abs();
+
+            let greenDifference = new GLSL.Float(needleChunk[index + 1] / 255);
+            greenDifference = greenDifference
+               .subtractFloat(haystackPixelColor.channel(1))
+               .abs();
+
+            let blueDifference = new GLSL.Float(needleChunk[index + 2] / 255);
+            blueDifference = blueDifference
+               .subtractFloat(haystackPixelColor.channel(2))
+               .abs();
+
             difference = difference.addFloat(
-               new GLSL.Float(needleChunk[index + 0] / 255)
-                  .subtractFloat(haystackPixelColor.channel(0))
-                  .abs(),
-               new GLSL.Float(needleChunk[index + 1] / 255)
-                  .subtractFloat(haystackPixelColor.channel(1))
-                  .abs(),
-               new GLSL.Float(needleChunk[index + 2] / 255)
-                  .subtractFloat(haystackPixelColor.channel(2))
-                  .abs()
+               redDifference,
+               greenDifference,
+               blueDifference
             );
          }
       }
 
-      difference = difference.divideFloat(new GLSL.Float(Math.pow(needleChunkSize, 2) * 3));
+      difference = difference.divideFloat(
+         new GLSL.Float(Math.pow(needleChunkSize, 2) * 3)
+      );
 
       const rendering = GLSL.render(
          new GLSL.Vector4([

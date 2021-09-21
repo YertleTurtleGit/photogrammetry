@@ -323,7 +323,7 @@ class GlslContext {
       const vertexShaderSource = this.glslShader.getVertexShaderSource();
       const fragmentShaderSource =
          this.glslShader.getFragmentShaderSource(outVariable);
-
+      console.log(fragmentShaderSource);
       this.glContext.shaderSource(vertexShader, vertexShaderSource);
       this.glContext.shaderSource(fragmentShader, fragmentShaderSource);
       //console.log("Compiling shader program.");
@@ -716,6 +716,8 @@ class GlslImage {
     * @returns {GlslVector4}
     */
    applyFilter(kernel, normalize = false) {
+      const kernelSize = kernel.length;
+
       let filterDeclaration = "";
 
       if (normalize) {
@@ -727,23 +729,25 @@ class GlslImage {
             });
          });
 
-         kernel.forEach((row, rowIndex) => {
-            row.forEach((value, columnIndex) => {
-               if (kernelSum !== 0) {
+         if (kernelSum !== 0) {
+            kernel.forEach((row, rowIndex) => {
+               row.forEach((value, columnIndex) => {
                   kernel[rowIndex][columnIndex] = value / kernelSum;
-               }
+               });
             });
-         });
+         }
       }
 
       kernel.forEach((row, rowIndex) => {
          row.forEach((value, columnIndex) => {
             filterDeclaration +=
-               " + (" +
+               " + " +
                GlslFloat.getJsNumberAsString(value) +
                " * " +
-               this.getNeighborPixel(columnIndex, rowIndex).getGlslName() +
-               ")";
+               this.getNeighborPixel(
+                  columnIndex - kernelSize / 2,
+                  rowIndex - kernelSize / 2
+               ).getGlslName();
          });
       });
 
@@ -758,8 +762,8 @@ class GlslImage {
     */
    getNeighborPixel(offsetX, offsetY) {
       const glslOffset = {
-         u: new GlslFloat((1 / this.jsImage.width) * offsetX).getGlslName(),
-         v: new GlslFloat((1 / this.jsImage.height) * offsetY).getGlslName(),
+         u: GlslFloat.getJsNumberAsString((1 / this.jsImage.width) * offsetX),
+         v: GlslFloat.getJsNumberAsString((1 / this.jsImage.height) * offsetY),
       };
 
       return new GlslVector4(
