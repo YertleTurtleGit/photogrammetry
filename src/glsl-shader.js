@@ -24,8 +24,8 @@ const FLOAT_PRECISION = GPU_GL_FLOAT_PRECISION.HIGH;
  */
 const GLSL_VARIABLE = {
    UV: "uv",
-   UV_U: "uv.u",
-   UV_V: "uv.v",
+   UV_U: "uv[0]",
+   UV_V: "uv[1]",
    TEX: "tex",
    POS: "pos",
    OUT: "fragColor",
@@ -626,7 +626,7 @@ class GlslOperation {
 
 class GlslImage {
    /**
-    * @private
+    * @public
     * @param  {HTMLImageElement} jsImage
     */
    constructor(jsImage) {
