@@ -1,0 +1,1 @@
+const DOM_DECLARATIONS={};
