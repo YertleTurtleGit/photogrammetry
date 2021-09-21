@@ -30,13 +30,11 @@ async function main() {
    shader.bind();
 
    const result = GLSL.render(
-      new GLSL.Image(imageA)
-         .applyFilter([
-            [1, 0, -1],
-            [0, 0, 0],
-            [-1, 0, 1],
-         ])
-         .multiplyFloat(new GLSL.Float(9999))
+      new GLSL.Image(imageA).applyFilter([
+         [0.5, 0, 0],
+         [0, 0, 0],
+         [0, 0, -0.5],
+      ])
    ).getJsImage();
 
    shader.purge();

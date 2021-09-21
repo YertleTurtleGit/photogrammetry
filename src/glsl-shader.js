@@ -718,6 +718,8 @@ class GlslImage {
    applyFilter(kernel, normalize = false) {
       const kernelSize = kernel.length;
 
+      // TODO Check if kernel is quadratic.
+
       let filterDeclaration = "";
 
       if (normalize) {
@@ -745,8 +747,8 @@ class GlslImage {
                GlslFloat.getJsNumberAsString(value) +
                " * " +
                this.getNeighborPixel(
-                  columnIndex - kernelSize / 2,
-                  rowIndex - kernelSize / 2
+                  columnIndex - Math.floor(kernelSize / 2),
+                  rowIndex - Math.floor(kernelSize / 2)
                ).getGlslName();
          });
       });
