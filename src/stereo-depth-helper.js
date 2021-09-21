@@ -13,8 +13,6 @@ class StereoDepthHelper {
       /** @type {number[][]} */
       const needleChunks = this.getImageChunks(imageA, needleChunkSize);
 
-      console.log(needleChunks[0]);
-
       return this.getNeedleChunkFitMap(
          needleChunks[0],
          needleChunkSize,
@@ -44,42 +42,32 @@ class StereoDepthHelper {
       shader.bind();
 
       const haystack = new GLSL.Image(haystackImage);
-      const difference = new GLSL.Float(0);
+      let difference = new GLSL.Float(0);
 
       for (let x = 0; x < needleChunkSize; x++) {
          for (let y = 0; y < needleChunkSize; y++) {
             const index = (x + y * needleChunkSize) * 3;
-
-            const needlePixelColor = new GLSL.Vector4([
-               new GLSL.Float(needleChunk[index] / 255),
-               new GLSL.Float(needleChunk[index + 1] / 255),
-               new GLSL.Float(needleChunk[index + 2] / 255),
-               new GLSL.Float(1),
-            ]);
 
             const haystackPixelColor = haystack.getNeighborPixel(
                x - needleChunkSize / 2,
                y - needleChunkSize / 2
             );
 
-            difference.addFloat(
-               needlePixelColor
-                  .channel(0)
+            difference = difference.addFloat(
+               new GLSL.Float(needleChunk[index + 0] / 255)
                   .subtractFloat(haystackPixelColor.channel(0))
                   .abs(),
-               needlePixelColor
-                  .channel(1)
+               new GLSL.Float(needleChunk[index + 1] / 255)
                   .subtractFloat(haystackPixelColor.channel(1))
                   .abs(),
-               needlePixelColor
-                  .channel(2)
+               new GLSL.Float(needleChunk[index + 2] / 255)
                   .subtractFloat(haystackPixelColor.channel(2))
                   .abs()
             );
          }
       }
 
-      //difference.divideFloat(new GLSL.Float(Math.pow(needleChunkSize, 2) * 3));
+      difference = difference.divideFloat(new GLSL.Float(Math.pow(needleChunkSize, 2) * 3));
 
       const rendering = GLSL.render(
          new GLSL.Vector4([
