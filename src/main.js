@@ -17,13 +17,14 @@ async function loadImage(url) {
    });
 }
 
+/** */
 async function main() {
    const imageA = await loadImage("./test-dataset/a.jpg");
    const imageB = await loadImage("./test-dataset/b.jpg");
 
-   //const result = await StereoDepthHelper.getDepthMapping(imageA, imageB);
+   const result = await StereoDepthHelper.getDepthMapping(imageA, imageB);
 
-   const shader = new GLSL.Shader({
+   /*const shader = new GLSL.Shader({
       width: imageA.width,
       height: imageA.height,
    });
@@ -37,9 +38,9 @@ async function main() {
       ])
    ).getJsImage();
 
-   shader.purge();
+   shader.purge();*/
 
-   document.body.appendChild(await result);
+   document.body.appendChild(result);
 }
 
 main();

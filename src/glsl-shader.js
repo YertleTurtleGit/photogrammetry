@@ -323,7 +323,8 @@ class GlslContext {
       const vertexShaderSource = this.glslShader.getVertexShaderSource();
       const fragmentShaderSource =
          this.glslShader.getFragmentShaderSource(outVariable);
-      console.log(fragmentShaderSource);
+      //console.log(vertexShaderSource);
+      //console.log(fragmentShaderSource);
       this.glContext.shaderSource(vertexShader, vertexShaderSource);
       this.glContext.shaderSource(fragmentShader, fragmentShaderSource);
       //console.log("Compiling shader program.");
@@ -716,11 +717,14 @@ class GlslImage {
     * @returns {GlslVector4}
     */
    applyFilter(kernel, normalize = false) {
-      const kernelSize = kernel.length;
-
       // TODO Check if kernel is quadratic.
 
-      let filterDeclaration = "";
+      let filtered = new GlslVector4([
+         new GlslFloat(0),
+         new GlslFloat(0),
+         new GlslFloat(0),
+         new GlslFloat(0),
+      ]);
 
       if (normalize) {
          let kernelSum = 0;
@@ -740,20 +744,27 @@ class GlslImage {
          }
       }
 
+      const kernelMiddle = (kernel.length - 1) / 2;
+
       kernel.forEach((row, rowIndex) => {
          row.forEach((value, columnIndex) => {
-            filterDeclaration +=
-               " + " +
-               GlslFloat.getJsNumberAsString(value) +
-               " * " +
-               this.getNeighborPixel(
-                  columnIndex - Math.floor(kernelSize / 2),
-                  rowIndex - Math.floor(kernelSize / 2)
-               ).getGlslName();
+            filtered = filtered.addVector4(
+               new GlslFloat(value).multiplyVector4(
+                  this.getNeighborPixel(
+                     columnIndex - kernelMiddle,
+                     rowIndex - kernelMiddle
+                  )
+               )
+            );
          });
       });
 
-      return new GlslVector4(null, filterDeclaration);
+      return new GlslVector4([
+         filtered.channel(0),
+         filtered.channel(1),
+         filtered.channel(2),
+         new GlslFloat(1),
+      ]);
    }
 
    /**
@@ -1051,13 +1062,13 @@ class GlslFloat extends GlslVariable {
     */
    static getJsNumberAsString(number) {
       if (Math.trunc(number) === number) {
-         return number.toString() + ".0";
+         return "(" + number.toString() + ".0)";
       }
       if (number.toString().includes("e-")) {
          //console.warn(number.toString() + " is converted to zero.");
          return "0.0";
       }
-      return number.toString();
+      return "(" + number.toString() + ")";
    }
    /**
     * @param  {number} [jsNumber=null]

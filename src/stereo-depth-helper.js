@@ -9,14 +9,14 @@ class StereoDepthHelper {
     * @param {number} needleChunkSize
     * @returns {Promise<HTMLImageElement>}
     */
-   static async getDepthMapping(imageA, imageB, needleChunkSize = 10) {
+   static async getDepthMapping(imageA, imageB, needleChunkSize = 3) {
       /** @type {number[][]} */
       const needleChunks = this.getImageChunks(imageA, needleChunkSize);
 
       return this.getNeedleChunkFitMap(
          needleChunks[0],
          needleChunkSize,
-         imageA
+         imageB
       );
 
       /*needleChunks.forEach((needleChunk) => {
@@ -41,6 +41,9 @@ class StereoDepthHelper {
       });
       shader.bind();
 
+      console.log(needleChunk);
+      const needleChunkMiddle = (needleChunkSize - 1) / 2;
+
       const haystack = new GLSL.Image(haystackImage);
       let difference = new GLSL.Float(0);
 
@@ -49,24 +52,23 @@ class StereoDepthHelper {
             const index = (x + y * needleChunkSize) * 3;
 
             const haystackPixelColor = haystack.getNeighborPixel(
-               x - needleChunkSize / 2,
-               y - needleChunkSize / 2
+               x - needleChunkMiddle,
+               y - needleChunkMiddle
             );
 
-            let redDifference = new GLSL.Float(needleChunk[index + 0] / 255);
-            redDifference = redDifference
-               .subtractFloat(haystackPixelColor.channel(0))
-               .abs();
+            console.log([x, y]);
 
-            let greenDifference = new GLSL.Float(needleChunk[index + 1] / 255);
-            greenDifference = greenDifference
-               .subtractFloat(haystackPixelColor.channel(1))
-               .abs();
+            const redDifference = haystackPixelColor
+               .channel(0)
+               .subtractFloat(new GLSL.Float(needleChunk[index + 0] / 255));
 
-            let blueDifference = new GLSL.Float(needleChunk[index + 2] / 255);
-            blueDifference = blueDifference
-               .subtractFloat(haystackPixelColor.channel(2))
-               .abs();
+            const greenDifference = haystackPixelColor
+               .channel(1)
+               .subtractFloat(new GLSL.Float(needleChunk[index + 1] / 255));
+
+            const blueDifference = haystackPixelColor
+               .channel(2)
+               .subtractFloat(new GLSL.Float(needleChunk[index + 2] / 255));
 
             difference = difference.addFloat(
                redDifference,
