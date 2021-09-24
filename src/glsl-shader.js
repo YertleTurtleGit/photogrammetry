@@ -774,9 +774,12 @@ class GlslImage {
     * @returns {GlslVector4}
     */
    getNeighborPixel(offsetX, offsetY) {
+      const u = (1 / this.jsImage.width) * offsetX;
+      const v = (1 / this.jsImage.height) * offsetY;
+
       const glslOffset = {
-         u: GlslFloat.getJsNumberAsString((1 / this.jsImage.width) * offsetX),
-         v: GlslFloat.getJsNumberAsString((1 / this.jsImage.height) * offsetY),
+         u: GlslFloat.getJsNumberAsString(u),
+         v: GlslFloat.getJsNumberAsString(v),
       };
 
       return new GlslVector4(

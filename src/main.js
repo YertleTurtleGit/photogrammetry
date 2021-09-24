@@ -1,4 +1,4 @@
-/* global GLSL, DOM_ELEMENTS, StereoDepthHelper */
+/* global StereoDepthHelper */
 
 /**
  * @param {string} url
@@ -19,8 +19,8 @@ async function loadImage(url) {
 
 /** */
 async function main() {
-   const imageA = await loadImage("./test-dataset/a.jpg");
-   const imageB = await loadImage("./test-dataset/b.jpg");
+   const imageA = await loadImage("./test-dataset/a_3.jpg");
+   const imageB = await loadImage("./test-dataset/b_3.jpg");
 
    const result = await StereoDepthHelper.getDepthMapping(imageA, imageB);
 
