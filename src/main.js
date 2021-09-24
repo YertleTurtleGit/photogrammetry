@@ -19,8 +19,8 @@ async function loadImage(url) {
 
 /** */
 async function main() {
-   const imageA = await loadImage("./test-dataset/a_3.jpg");
-   const imageB = await loadImage("./test-dataset/b_3.jpg");
+   const imageA = await loadImage("./test-dataset/a_4.jpg");
+   const imageB = await loadImage("./test-dataset/b_4.jpg");
 
    const result = await StereoDepthHelper.getDepthMapping(imageA, imageB);
 

@@ -1,5 +1,5 @@
 /* exported StereoDepthHelper */
-/* global GLSL */
+/* global GLSL, jsfeat */
 
 class StereoDepthHelper {
    /**
@@ -13,19 +13,35 @@ class StereoDepthHelper {
    static async getDepthMapping(
       imageA,
       imageB,
-      needleChunkSize = 21,
-      chunkSamplingStep = 7
+      needleChunkSize = 51,
+      chunkSamplingStep = 50
    ) {
+      imageA = await StereoDepthHelper.preprocessImage(imageA);
+      imageB = await StereoDepthHelper.preprocessImage(imageB);
+
       const chunks = StereoDepthHelper.getImageChunks(imageA, needleChunkSize);
 
       const depthMapCanvas = document.createElement("canvas");
       depthMapCanvas.width = imageA.width;
       depthMapCanvas.height = imageB.height;
+      const depthMapCanvasContext = depthMapCanvas.getContext("2d");
+
+      const uiCanvas = document.createElement("canvas");
+      uiCanvas.width = imageA.width;
+      uiCanvas.height = imageB.height * 2;
+      const uiCanvasContext = uiCanvas.getContext("2d");
 
       document.body.appendChild(depthMapCanvas);
-      document.body.appendChild(imageA);
+      document.body.appendChild(uiCanvas);
 
-      const depthMapCanvasContext = depthMapCanvas.getContext("2d");
+      uiCanvasContext.drawImage(imageA, 0, 0, imageA.width, imageA.height);
+      uiCanvasContext.drawImage(
+         imageB,
+         0,
+         imageA.height,
+         imageA.width,
+         imageA.height
+      );
 
       for (let i = 0; i < chunks.length; i++) {
          const chunk = chunks[i];
@@ -39,37 +55,77 @@ class StereoDepthHelper {
             imageB,
             chunkSamplingStep
          );
-         const distanceVector = {
-            x: sourcePoint.x - projectionPoint.x,
-            y: sourcePoint.y - projectionPoint.y,
-         };
+         if (projectionPoint) {
+            const distanceVector = {
+               x: sourcePoint.x - projectionPoint.x,
+               y: sourcePoint.y - projectionPoint.y,
+            };
 
-         const distance = Math.sqrt(
-            Math.pow(distanceVector.x, 2) + Math.pow(distanceVector.y, 2)
-         );
+            const distance = Math.sqrt(
+               Math.pow(distanceVector.x, 2) + Math.pow(distanceVector.y, 2)
+            );
 
-         const distanceString = String(
-            255 - Math.round(Math.min(255, distance))
-         );
+            const distanceString = String(
+               255 - Math.round(Math.min(255, distance))
+            );
 
-         depthMapCanvasContext.fillStyle =
-            "rgb(" +
-            distanceString +
-            ", " +
-            distanceString +
-            ", " +
-            distanceString +
-            ")";
+            uiCanvasContext.beginPath();
+            uiCanvasContext.moveTo(sourcePoint.x, sourcePoint.y);
+            uiCanvasContext.strokeStyle = "red";
+            uiCanvasContext.lineTo(
+               projectionPoint.x,
+               projectionPoint.y + imageA.height
+            );
+            uiCanvasContext.stroke();
 
-         depthMapCanvasContext.fillRect(
-            chunk.offset.x,
-            chunk.offset.y,
-            needleChunkSize,
-            needleChunkSize
-         );
+            depthMapCanvasContext.fillStyle =
+               "rgb(" +
+               distanceString +
+               ", " +
+               distanceString +
+               ", " +
+               distanceString +
+               ")";
+
+            depthMapCanvasContext.fillRect(
+               chunk.offset.x,
+               chunk.offset.y,
+               needleChunkSize,
+               needleChunkSize
+            );
+         }
       }
 
       return null;
+   }
+
+   /**
+    * @param {HTMLImageElement} image
+    * @returns {Promise<HTMLImageElement>}
+    */
+   static async preprocessImage(image) {
+      const shader = new GLSL.Shader({
+         width: image.width,
+         height: image.height,
+      });
+      shader.bind();
+
+      const glslImage = new GLSL.Image(image);
+
+      const filteredImage = GLSL.render(
+         glslImage.applyFilter(
+            [
+               [-1, -1, -1],
+               [-1, 8.5, -1],
+               [-1, -1, -1],
+            ],
+            true
+         )
+      ).getJsImage();
+
+      shader.purge();
+
+      return filteredImage;
    }
 
    /**
@@ -236,6 +292,8 @@ class StereoDepthHelper {
       const pixelArray = GLSL.render(GLSL.Image.load(image)).getPixelArray();
       shader.unbind();
 
+      let twinCount = 0;
+
       for (let x = 0; x < dimensions.width; x++) {
          for (let y = 0; y < dimensions.height; y++) {
             const index = (x + y * dimensions.width) * 4;
@@ -244,9 +302,17 @@ class StereoDepthHelper {
                brightestPixel = { x: x, y: y };
                brightestValue = brightness;
             }
+
+            if (brightness === brightestValue) {
+               twinCount++;
+            }
          }
       }
 
+      if (brightestValue < 200 || twinCount > 40) {
+         console.log({ brightestValue, twinCount });
+         return undefined;
+      }
       return brightestPixel;
    }
 }
