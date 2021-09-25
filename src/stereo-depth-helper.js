@@ -14,7 +14,7 @@ class StereoDepthHelper {
       imageA,
       imageB,
       needleChunkSize = 51,
-      chunkSamplingStep = 50
+      chunkSamplingStep = 7
    ) {
       imageA = await StereoDepthHelper.preprocessImage(imageA);
       imageB = await StereoDepthHelper.preprocessImage(imageB);
