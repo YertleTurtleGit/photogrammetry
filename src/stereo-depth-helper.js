@@ -1,5 +1,5 @@
 /* exported StereoDepthHelper */
-/* global GLSL, jsfeat */
+/* global GLSL */
 
 class StereoDepthHelper {
    /**
@@ -13,90 +13,122 @@ class StereoDepthHelper {
    static async getDepthMapping(
       imageA,
       imageB,
-      needleChunkSize = 51,
+      needleChunkSize = 101,
       chunkSamplingStep = 7
    ) {
-      imageA = await StereoDepthHelper.preprocessImage(imageA);
-      imageB = await StereoDepthHelper.preprocessImage(imageB);
+      return new Promise((resolve) => {
+         setTimeout(async () => {
+            imageA = await StereoDepthHelper.preprocessImage(imageA);
+            imageB = await StereoDepthHelper.preprocessImage(imageB);
 
-      const chunks = StereoDepthHelper.getImageChunks(imageA, needleChunkSize);
+            const dimensions = { width: imageA.width, height: imageA.height };
 
-      const depthMapCanvas = document.createElement("canvas");
-      depthMapCanvas.width = imageA.width;
-      depthMapCanvas.height = imageB.height;
-      const depthMapCanvasContext = depthMapCanvas.getContext("2d");
+            const shaderA = new GLSL.Shader(dimensions);
+            shaderA.bind();
+            const pixelArrayA = GLSL.render(
+               GLSL.Image.load(imageA)
+            ).getPixelArray();
+            shaderA.purge();
 
-      const uiCanvas = document.createElement("canvas");
-      uiCanvas.width = imageA.width;
-      uiCanvas.height = imageB.height * 2;
-      const uiCanvasContext = uiCanvas.getContext("2d");
+            const shaderB = new GLSL.Shader(dimensions);
+            shaderB.bind();
+            const pixelArrayB = GLSL.render(
+               GLSL.Image.load(imageB)
+            ).getPixelArray();
+            shaderB.purge();
 
-      document.body.appendChild(depthMapCanvas);
-      document.body.appendChild(uiCanvas);
-
-      uiCanvasContext.drawImage(imageA, 0, 0, imageA.width, imageA.height);
-      uiCanvasContext.drawImage(
-         imageB,
-         0,
-         imageA.height,
-         imageA.width,
-         imageA.height
-      );
-
-      for (let i = 0; i < chunks.length; i++) {
-         const chunk = chunks[i];
-
-         const sourcePoint = {
-            x: chunk.offset.x + needleChunkSize,
-            y: chunk.offset.y + needleChunkSize,
-         };
-         const projectionPoint = await StereoDepthHelper.getFeaturePoint(
-            chunk.data,
-            imageB,
-            chunkSamplingStep
-         );
-         if (projectionPoint) {
-            const distanceVector = {
-               x: sourcePoint.x - projectionPoint.x,
-               y: sourcePoint.y - projectionPoint.y,
-            };
-
-            const distance = Math.sqrt(
-               Math.pow(distanceVector.x, 2) + Math.pow(distanceVector.y, 2)
-            );
-
-            const depthString = String(
-               255 - Math.round(Math.min(255, distance))
-            );
-
-            uiCanvasContext.beginPath();
-            uiCanvasContext.moveTo(sourcePoint.x, sourcePoint.y);
-            uiCanvasContext.strokeStyle = "red";
-            uiCanvasContext.lineTo(
-               projectionPoint.x,
-               projectionPoint.y + imageA.height
-            );
-            uiCanvasContext.stroke();
-
-            depthMapCanvasContext.fillStyle =
-               "rgb(" +
-               depthString +
-               ", " +
-               depthString +
-               ", " +
-               depthString +
-               ")";
-
-            depthMapCanvasContext.fillRect(
-               chunk.offset.x,
-               chunk.offset.y,
-               needleChunkSize,
+            const chunksA = StereoDepthHelper.getImageChunks(
+               pixelArrayA,
+               dimensions,
                needleChunkSize
             );
-         }
-      }
 
-      return null;
+            const depthMapCanvas = document.createElement("canvas");
+            depthMapCanvas.width = dimensions.width;
+            depthMapCanvas.height = dimensions.height;
+            const depthMapCanvasContext = depthMapCanvas.getContext("2d");
+
+            const uiCanvas = document.createElement("canvas");
+            uiCanvas.width = dimensions.width;
+            uiCanvas.height = dimensions.height * 2;
+            const uiCanvasContext = uiCanvas.getContext("2d");
+
+            document.body.appendChild(depthMapCanvas);
+            document.body.appendChild(uiCanvas);
+
+            uiCanvasContext.drawImage(
+               imageA,
+               0,
+               0,
+               dimensions.width,
+               dimensions.height
+            );
+            uiCanvasContext.drawImage(
+               imageB,
+               0,
+               dimensions.height,
+               dimensions.width,
+               dimensions.height
+            );
+
+            for (let i = 0; i < chunksA.length; i++) {
+               const chunk = chunksA[i];
+
+               const sourcePoint = {
+                  x: chunk.offset.x + needleChunkSize,
+                  y: chunk.offset.y + needleChunkSize,
+               };
+               StereoDepthHelper.getFeaturePoint(
+                  chunk.data,
+                  pixelArrayB,
+                  dimensions
+               ).then((projectionPoint) => {
+                  if (projectionPoint) {
+                     const distanceVector = {
+                        x: sourcePoint.x - projectionPoint.x,
+                        y: sourcePoint.y - projectionPoint.y,
+                     };
+
+                     const distance = Math.sqrt(
+                        Math.pow(distanceVector.x, 2) +
+                           Math.pow(distanceVector.y, 2)
+                     );
+
+                     const depthString = String(
+                        255 - Math.round(Math.min(255, distance))
+                     );
+
+                     uiCanvasContext.beginPath();
+                     uiCanvasContext.moveTo(sourcePoint.x, sourcePoint.y);
+                     uiCanvasContext.strokeStyle = "red";
+                     uiCanvasContext.lineTo(
+                        projectionPoint.x,
+                        projectionPoint.y + dimensions.height
+                     );
+                     uiCanvasContext.stroke();
+
+                     depthMapCanvasContext.fillStyle =
+                        "rgb(" +
+                        depthString +
+                        ", " +
+                        depthString +
+                        ", " +
+                        depthString +
+                        ")";
+
+                     depthMapCanvasContext.fillRect(
+                        chunk.offset.x,
+                        chunk.offset.y,
+                        needleChunkSize,
+                        needleChunkSize
+                     );
+                  }
+               });
+            }
+
+            resolve(null);
+         });
+      });
    }
 
    /**
@@ -127,34 +159,129 @@ class StereoDepthHelper {
 
    /**
     * @param {number[]} sourceImageChunkData
-    * @param {HTMLImageElement} projectionImage
-    * @param {number} chunkSamplingStep
+    * @param {Uint8Array} projectionImageArray
+    * @param {{width:number, height:number}} projectionImageDimensions
     * @returns {Promise<{x:number, y:number}>}
     */
    static async getFeaturePoint(
       sourceImageChunkData,
-      projectionImage,
-      chunkSamplingStep
+      projectionImageArray,
+      projectionImageDimensions
    ) {
-      const chunkFitMap = await StereoDepthHelper.getNeedleChunkFitMap(
+      return StereoDepthHelper.getBestNeedleChunkFit(
          sourceImageChunkData,
-         projectionImage,
-         chunkSamplingStep
+         projectionImageArray,
+         projectionImageDimensions
       );
-
-      const brightestPixel = StereoDepthHelper.getBrightestPixel(chunkFitMap);
-
-      return brightestPixel;
    }
 
    /**
+    * @private
+    * @param {number[]} needleChunk
+    * @param {Uint8Array} haystackPixelArray
+    * @param {{width:number, height:number}} dimensions
+    * @returns {Promise<{x:number, y:number}>}
+    */
+   static async getBestNeedleChunkFit(
+      needleChunk,
+      haystackPixelArray,
+      dimensions
+   ) {
+      return new Promise((resolve) => {
+         setTimeout(() => {
+            const needleChunkSize = Math.sqrt(needleChunk.length / 3);
+
+            let lowestAberrance = Number.MAX_VALUE;
+            let bestFitCoordinate;
+
+            for (let x = 0; x < dimensions.width; x += 5) {
+               for (let y = 0; y < dimensions.height; y += 5) {
+                  const haystackIndex = (x + y * dimensions.width) * 4;
+                  const haystackRed = haystackPixelArray[haystackIndex + 0];
+                  const haystackGreen = haystackPixelArray[haystackIndex + 1];
+                  const haystackBlue = haystackPixelArray[haystackIndex + 2];
+
+                  let needleIndex = haystackIndex;
+                  while (needleIndex >= needleChunkSize) {
+                     needleIndex -= needleChunkSize;
+                  }
+                  const needleRed = needleChunk[needleIndex + 0];
+                  const needleGreen = needleChunk[needleIndex + 1];
+                  const needleBlue = needleChunk[needleIndex + 2];
+
+                  const redAberrance = Math.abs(haystackRed - needleRed);
+                  const greenAberrance = Math.abs(haystackGreen - needleGreen);
+                  const blueAberrance = Math.abs(haystackBlue - needleBlue);
+
+                  const aberrance =
+                     redAberrance + greenAberrance + blueAberrance;
+
+                  if (aberrance < lowestAberrance) {
+                     lowestAberrance = aberrance;
+                     bestFitCoordinate = { x: x, y: y };
+                  }
+               }
+            }
+
+            console.log(bestFitCoordinate);
+            resolve(bestFitCoordinate);
+         });
+      });
+   }
+
+   /**
+    * @private
+    * @param {Uint8Array} imageArray
+    * @param {{width:number, height:number}} imageDimensions
+    * @param {number} chunkSize
+    * @returns {{data:number[], offset:{x:number, y:number}}[]}
+    */
+   static getImageChunks(imageArray, imageDimensions, chunkSize) {
+      /** @type {{data:number[], offset:{x:number, y:number}}[]} */
+      const chunks = [];
+      let chunkIndex = 0;
+
+      for (
+         let xOffset = 0;
+         xOffset + chunkSize < imageDimensions.width;
+         xOffset += chunkSize
+      ) {
+         for (
+            let yOffset = 0;
+            yOffset + chunkSize < imageDimensions.height;
+            yOffset += chunkSize
+         ) {
+            chunks.push({ data: [], offset: { x: xOffset, y: yOffset } });
+
+            for (let x = 0; x < chunkSize; x++) {
+               for (let y = 0; y < chunkSize; y++) {
+                  const xIndex = x + xOffset;
+                  const yIndex = y + yOffset;
+                  const index = (xIndex + yIndex * imageDimensions.width) * 4;
+
+                  const red = imageArray[index + 0];
+                  const green = imageArray[index + 1];
+                  const blue = imageArray[index + 2];
+                  const alpha = imageArray[index + 3];
+
+                  chunks[chunkIndex].data.push(red, green, blue, alpha);
+               }
+            }
+            chunkIndex++;
+         }
+      }
+      return chunks;
+   }
+
+   /**
+    * @deprecated
     * @private
     * @param {number[]} needleChunk
     * @param {HTMLImageElement} haystackImage
     * @param {number} chunkSamplingStep
     * @returns {Promise<HTMLImageElement>}
     */
-   static async getNeedleChunkFitMap(
+   static async getNeedleChunkFitMapGPU(
       needleChunk,
       haystackImage,
       chunkSamplingStep
@@ -172,12 +299,6 @@ class StereoDepthHelper {
       let difference = new GLSL.Float(0);
 
       let count = 0;
-
-      for (let x = 0; x < needleChunkSize; x += chunkSamplingStep) {
-         for (let y = 0; y < needleChunkSize; y += chunkSamplingStep) {
-            count++;
-         }
-      }
 
       for (let x = 0; x < needleChunkSize; x += chunkSamplingStep) {
          for (let y = 0; y < needleChunkSize; y += chunkSamplingStep) {
@@ -202,14 +323,18 @@ class StereoDepthHelper {
                .abs();
 
             difference = difference.addFloat(
-               redDifference.divideFloat(new GLSL.Float(count * 3)),
-               greenDifference.divideFloat(new GLSL.Float(count * 3)),
-               blueDifference.divideFloat(new GLSL.Float(count * 3))
+               redDifference,
+               greenDifference,
+               blueDifference
             );
+
+            count++;
          }
       }
 
-      difference = new GLSL.Float(1).subtractFloat(difference);
+      difference = new GLSL.Float(1).subtractFloat(
+         difference.divideFloat(new GLSL.Float(count * 3))
+      );
 
       const rendering = GLSL.render(
          new GLSL.Vector4([
@@ -223,93 +348,5 @@ class StereoDepthHelper {
       shader.purge();
 
       return rendering;
-   }
-
-   /**
-    * @private
-    * @param {HTMLImageElement} image
-    * @param {number} chunkSize
-    * @returns {{data:number[], offset:{x:number, y:number}}[]}
-    */
-   static getImageChunks(image, chunkSize) {
-      const dimensions = { width: image.width, height: image.height };
-
-      const shader = new GLSL.Shader(dimensions);
-      shader.bind();
-      const pixelArray = GLSL.render(GLSL.Image.load(image)).getPixelArray();
-      shader.unbind();
-
-      /** @type {{data:number[], offset:{x:number, y:number}}[]} */
-      const chunks = [];
-      let chunkIndex = 0;
-
-      for (
-         let xOffset = 0;
-         xOffset + chunkSize < dimensions.width;
-         xOffset += chunkSize
-      ) {
-         for (
-            let yOffset = 0;
-            yOffset + chunkSize < dimensions.height;
-            yOffset += chunkSize
-         ) {
-            chunks.push({ data: [], offset: { x: xOffset, y: yOffset } });
-
-            for (let x = 0; x < chunkSize; x++) {
-               for (let y = 0; y < chunkSize; y++) {
-                  const xIndex = x + xOffset;
-                  const yIndex = y + yOffset;
-                  const index = (xIndex + yIndex * dimensions.width) * 4;
-
-                  const red = pixelArray[index + 0];
-                  const green = pixelArray[index + 1];
-                  const blue = pixelArray[index + 2];
-
-                  chunks[chunkIndex].data.push(red, green, blue);
-               }
-            }
-            chunkIndex++;
-         }
-      }
-      return chunks;
-   }
-
-   /**
-    * @param {HTMLImageElement} image
-    * @returns {{x:number, y:number}}
-    */
-   static getBrightestPixel(image) {
-      let brightestPixel;
-      let brightestValue = 0;
-
-      const dimensions = { width: image.width, height: image.height };
-
-      const shader = new GLSL.Shader(dimensions);
-      shader.bind();
-      const pixelArray = GLSL.render(GLSL.Image.load(image)).getPixelArray();
-      shader.unbind();
-
-      let twinCount = 0;
-
-      for (let x = 0; x < dimensions.width; x++) {
-         for (let y = 0; y < dimensions.height; y++) {
-            const index = (x + y * dimensions.width) * 4;
-            const brightness = pixelArray[index];
-            if (brightness > brightestValue) {
-               brightestPixel = { x: x, y: y };
-               brightestValue = brightness;
-            }
-
-            if (brightness === brightestValue) {
-               twinCount++;
-            }
-         }
-      }
-
-      if (brightestValue < 200 || twinCount > 40) {
-         console.log({ brightestValue, twinCount });
-         return undefined;
-      }
-      return brightestPixel;
    }
 }
