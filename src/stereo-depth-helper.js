@@ -113,14 +113,11 @@ class StereoDepthHelper {
       const glslImage = new GLSL.Image(image);
 
       const filteredImage = GLSL.render(
-         glslImage.applyFilter(
-            [
-               [-1, -1, -1],
-               [-1, 8.5, -1],
-               [-1, -1, -1],
-            ],
-            true
-         )
+         glslImage.applyFilter([
+            [-1, -1, -1],
+            [-1, 8.5, -1],
+            [-1, -1, -1],
+         ])
       ).getJsImage();
 
       shader.purge();
