@@ -13,7 +13,7 @@ class StereoDepthHelper {
    static async getDepthMapping(
       imageA,
       imageB,
-      needleChunkSize = 101,
+      needleChunkSize = 51,
       chunkSamplingStep = 7
    ) {
       return new Promise((resolve) => {
@@ -78,8 +78,8 @@ class StereoDepthHelper {
                   x: chunk.offset.x + needleChunkSize,
                   y: chunk.offset.y + needleChunkSize,
                };
-               StereoDepthHelper.getFeaturePoint(
-                  chunk.data,
+               StereoDepthHelper.getBestNeedleChunkFit(
+                  chunk,
                   pixelArrayB,
                   dimensions
                ).then((projectionPoint) => {
@@ -158,26 +158,8 @@ class StereoDepthHelper {
    }
 
    /**
-    * @param {number[]} sourceImageChunkData
-    * @param {Uint8Array} projectionImageArray
-    * @param {{width:number, height:number}} projectionImageDimensions
-    * @returns {Promise<{x:number, y:number}>}
-    */
-   static async getFeaturePoint(
-      sourceImageChunkData,
-      projectionImageArray,
-      projectionImageDimensions
-   ) {
-      return StereoDepthHelper.getBestNeedleChunkFit(
-         sourceImageChunkData,
-         projectionImageArray,
-         projectionImageDimensions
-      );
-   }
-
-   /**
     * @private
-    * @param {number[]} needleChunk
+    * @param {{data:number[], offset:{x:number, y:number}}} needleChunk
     * @param {Uint8Array} haystackPixelArray
     * @param {{width:number, height:number}} dimensions
     * @returns {Promise<{x:number, y:number}>}
@@ -189,41 +171,69 @@ class StereoDepthHelper {
    ) {
       return new Promise((resolve) => {
          setTimeout(() => {
-            const needleChunkSize = Math.sqrt(needleChunk.length / 3);
+            const needleChunkSize = Math.sqrt(needleChunk.data.length / 4);
 
             let lowestAberrance = Number.MAX_VALUE;
             let bestFitCoordinate;
+            let twinCount = 0;
 
-            for (let x = 0; x < dimensions.width; x += 5) {
-               for (let y = 0; y < dimensions.height; y += 5) {
-                  const haystackIndex = (x + y * dimensions.width) * 4;
-                  const haystackRed = haystackPixelArray[haystackIndex + 0];
-                  const haystackGreen = haystackPixelArray[haystackIndex + 1];
-                  const haystackBlue = haystackPixelArray[haystackIndex + 2];
+            for (let x = needleChunkSize; x < dimensions.width; x++) {
+               for (let y = needleChunkSize; y < dimensions.height; y++) {
+                  let aberrance = 0;
 
-                  let needleIndex = haystackIndex;
-                  while (needleIndex >= needleChunkSize) {
-                     needleIndex -= needleChunkSize;
+                  for (let xc = 0; xc < needleChunkSize; xc += 10) {
+                     for (let yc = 0; yc < needleChunkSize; yc += 10) {
+                        const xCoordinate = x + xc;
+                        const yCoordinate = y + yc;
+
+                        const haystackIndex = Math.round(
+                           xCoordinate + yCoordinate * dimensions.width
+                        );
+
+                        const haystackRed =
+                           haystackPixelArray[haystackIndex + 0];
+                        const haystackGreen =
+                           haystackPixelArray[haystackIndex + 1];
+                        const haystackBlue =
+                           haystackPixelArray[haystackIndex + 2];
+
+                        const needleIndex = Math.round(
+                           xc + yc * needleChunkSize
+                        );
+
+                        const needleRed = needleChunk.data[needleIndex + 0];
+                        const needleGreen = needleChunk.data[needleIndex + 1];
+                        const needleBlue = needleChunk.data[needleIndex + 2];
+
+                        const redAberrance = Math.abs(haystackRed - needleRed);
+                        const greenAberrance = Math.abs(
+                           haystackGreen - needleGreen
+                        );
+                        const blueAberrance = Math.abs(
+                           haystackBlue - needleBlue
+                        );
+
+                        aberrance +=
+                           redAberrance + greenAberrance + blueAberrance;
+                     }
                   }
-                  const needleRed = needleChunk[needleIndex + 0];
-                  const needleGreen = needleChunk[needleIndex + 1];
-                  const needleBlue = needleChunk[needleIndex + 2];
-
-                  const redAberrance = Math.abs(haystackRed - needleRed);
-                  const greenAberrance = Math.abs(haystackGreen - needleGreen);
-                  const blueAberrance = Math.abs(haystackBlue - needleBlue);
-
-                  const aberrance =
-                     redAberrance + greenAberrance + blueAberrance;
 
                   if (aberrance < lowestAberrance) {
                      lowestAberrance = aberrance;
                      bestFitCoordinate = { x: x, y: y };
+                  } else if (aberrance === lowestAberrance) {
+                     twinCount++;
+                  }
+
+                  if (lowestAberrance === 0) {
+                     console.log({ bestFitCoordinate, lowestAberrance });
+                     resolve(bestFitCoordinate);
+                     return;
                   }
                }
             }
 
-            console.log(bestFitCoordinate);
+            console.log({ bestFitCoordinate, lowestAberrance, twinCount });
             resolve(bestFitCoordinate);
          });
       });
@@ -281,7 +291,7 @@ class StereoDepthHelper {
     * @param {number} chunkSamplingStep
     * @returns {Promise<HTMLImageElement>}
     */
-   static async getNeedleChunkFitMapGPU(
+   /*static async getNeedleChunkFitMapGPU(
       needleChunk,
       haystackImage,
       chunkSamplingStep
@@ -348,5 +358,5 @@ class StereoDepthHelper {
       shader.purge();
 
       return rendering;
-   }
+   }*/
 }
