@@ -172,6 +172,7 @@ class StereoDepthHelper {
       return new Promise((resolve) => {
          setTimeout(() => {
             const needleChunkSize = Math.sqrt(needleChunk.data.length / 4);
+            const chunkOffset = (needleChunkSize - 1) / 2;
 
             let lowestAberrance = Number.MAX_VALUE;
             let bestFitCoordinate;
@@ -183,12 +184,11 @@ class StereoDepthHelper {
 
                   for (let xc = 0; xc < needleChunkSize; xc += 10) {
                      for (let yc = 0; yc < needleChunkSize; yc += 10) {
-                        const xCoordinate = x + xc;
-                        const yCoordinate = y + yc;
+                        const xCoordinate = x + xc - chunkOffset;
+                        const yCoordinate = y + yc - chunkOffset;
 
-                        const haystackIndex = Math.round(
-                           xCoordinate + yCoordinate * dimensions.width
-                        );
+                        const haystackIndex =
+                           (xCoordinate + yCoordinate * dimensions.width) * 4;
 
                         const haystackRed =
                            haystackPixelArray[haystackIndex + 0];
@@ -197,9 +197,7 @@ class StereoDepthHelper {
                         const haystackBlue =
                            haystackPixelArray[haystackIndex + 2];
 
-                        const needleIndex = Math.round(
-                           xc + yc * needleChunkSize
-                        );
+                        const needleIndex = (xc + yc * needleChunkSize) * 4;
 
                         const needleRed = needleChunk.data[needleIndex + 0];
                         const needleGreen = needleChunk.data[needleIndex + 1];
