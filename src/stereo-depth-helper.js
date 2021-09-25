@@ -65,7 +65,7 @@ class StereoDepthHelper {
                Math.pow(distanceVector.x, 2) + Math.pow(distanceVector.y, 2)
             );
 
-            const distanceString = String(
+            const depthString = String(
                255 - Math.round(Math.min(255, distance))
             );
 
@@ -80,11 +80,11 @@ class StereoDepthHelper {
 
             depthMapCanvasContext.fillStyle =
                "rgb(" +
-               distanceString +
+               depthString +
                ", " +
-               distanceString +
+               depthString +
                ", " +
-               distanceString +
+               depthString +
                ")";
 
             depthMapCanvasContext.fillRect(
