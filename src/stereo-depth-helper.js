@@ -13,8 +13,8 @@ class StereoDepthHelper {
    static async getDepthMapping(
       imageA,
       imageB,
-      needleChunkSize = 15,
-      chunkSamplingStep = 1
+      needleChunkSize = 21,
+      chunkSamplingStep = 2
    ) {
       return new Promise((resolve) => {
          setTimeout(async () => {
@@ -95,7 +95,7 @@ class StereoDepthHelper {
                            Math.pow(distanceVector.y, 2)
                      );
 
-                     distance *= 3;
+                     distance *= 10;
 
                      console.log(distance);
 
@@ -159,8 +159,7 @@ class StereoDepthHelper {
 
       shader.purge();
 
-      //return filteredImage;
-      return image;
+      return filteredImage;
    }
 
    /**
