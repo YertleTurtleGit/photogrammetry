@@ -14,7 +14,7 @@ class StereoDepthHelper {
       imageA,
       imageB,
       needleChunkSize = 51,
-      chunkSamplingStep = 7
+      chunkSamplingStep = 10
    ) {
       return new Promise((resolve) => {
          setTimeout(async () => {
@@ -155,7 +155,8 @@ class StereoDepthHelper {
 
       shader.purge();
 
-      return filteredImage;
+      //return filteredImage;
+      return image;
    }
 
    /**
@@ -181,8 +182,8 @@ class StereoDepthHelper {
             let bestFitCoordinate;
             let twinCount = 0;
 
-            for (let x = needleChunkSize; x < dimensions.width; x++) {
-               for (let y = needleChunkSize; y < dimensions.height; y++) {
+            for (let x = 0; x < dimensions.width; x++) {
+               for (let y = 0; y < dimensions.height; y++) {
                   let aberrance = 0;
 
                   for (
@@ -195,8 +196,8 @@ class StereoDepthHelper {
                         yc < needleChunkSize;
                         yc += chunkSamplingStep
                      ) {
-                        const xCoordinate = x + xc - chunkOffset;
-                        const yCoordinate = y + yc - chunkOffset;
+                        const xCoordinate = x + xc + chunkOffset;
+                        const yCoordinate = y + yc + chunkOffset;
 
                         const haystackIndex =
                            (xCoordinate + yCoordinate * dimensions.width) * 4;
