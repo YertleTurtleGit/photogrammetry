@@ -13,8 +13,8 @@ class StereoDepthHelper {
    static async getDepthMapping(
       imageA,
       imageB,
-      needleChunkSize = 51,
-      chunkSamplingStep = 10
+      needleChunkSize = 15,
+      chunkSamplingStep = 1
    ) {
       return new Promise((resolve) => {
          setTimeout(async () => {
@@ -75,8 +75,8 @@ class StereoDepthHelper {
                const chunk = chunksA[i];
 
                const sourcePoint = {
-                  x: chunk.offset.x + needleChunkSize,
-                  y: chunk.offset.y + needleChunkSize,
+                  x: chunk.offset.x + (needleChunkSize - 1) / 2,
+                  y: chunk.offset.y + (needleChunkSize - 1) / 2,
                };
                StereoDepthHelper.getBestNeedleChunkFit(
                   chunk,
@@ -90,10 +90,14 @@ class StereoDepthHelper {
                         y: sourcePoint.y - projectionPoint.y,
                      };
 
-                     const distance = Math.sqrt(
+                     let distance = Math.sqrt(
                         Math.pow(distanceVector.x, 2) +
                            Math.pow(distanceVector.y, 2)
                      );
+
+                     distance *= 3;
+
+                     console.log(distance);
 
                      const depthString = String(
                         255 - Math.round(Math.min(255, distance))
@@ -209,7 +213,7 @@ class StereoDepthHelper {
                         const haystackBlue =
                            haystackPixelArray[haystackIndex + 2];
 
-                        const needleIndex = (xc + yc * needleChunkSize) * 4;
+                        const needleIndex = (yc + xc * needleChunkSize) * 4;
 
                         const needleRed = needleChunk.data[needleIndex + 0];
                         const needleGreen = needleChunk.data[needleIndex + 1];
@@ -230,13 +234,20 @@ class StereoDepthHelper {
 
                   if (aberrance < lowestAberrance) {
                      lowestAberrance = aberrance;
-                     bestFitCoordinate = { x: x, y: y };
+                     bestFitCoordinate = {
+                        x: x + needleChunkSize,
+                        y: y + needleChunkSize,
+                     };
                   } else if (aberrance === lowestAberrance) {
                      twinCount++;
                   }
 
                   if (lowestAberrance === 0) {
-                     console.log({ bestFitCoordinate, lowestAberrance });
+                     console.log({
+                        bestFitCoordinate,
+                        lowestAberrance,
+                        twinCount,
+                     });
                      resolve(bestFitCoordinate);
                      return;
                   }
@@ -262,13 +273,13 @@ class StereoDepthHelper {
       let chunkIndex = 0;
 
       for (
-         let xOffset = 0;
-         xOffset + chunkSize < imageDimensions.width;
+         let xOffset = (chunkSize - 1) / 2;
+         xOffset < imageDimensions.width - (chunkSize - 1) / 2;
          xOffset += chunkSize
       ) {
          for (
-            let yOffset = 0;
-            yOffset + chunkSize < imageDimensions.height;
+            let yOffset = (chunkSize - 1) / 2;
+            yOffset < imageDimensions.height - (chunkSize - 1) / 2;
             yOffset += chunkSize
          ) {
             chunks.push({ data: [], offset: { x: xOffset, y: yOffset } });
@@ -301,7 +312,7 @@ class StereoDepthHelper {
     * @param {number} chunkSamplingStep
     * @returns {Promise<HTMLImageElement>}
     */
-   /*static async getNeedleChunkFitMapGPU(
+   static async getNeedleChunkFitMapGPU(
       needleChunk,
       haystackImage,
       chunkSamplingStep
@@ -368,5 +379,5 @@ class StereoDepthHelper {
       shader.purge();
 
       return rendering;
-   }*/
+   }
 }
