@@ -81,7 +81,8 @@ class StereoDepthHelper {
                StereoDepthHelper.getBestNeedleChunkFit(
                   chunk,
                   pixelArrayB,
-                  dimensions
+                  dimensions,
+                  chunkSamplingStep
                ).then((projectionPoint) => {
                   if (projectionPoint) {
                      const distanceVector = {
@@ -162,12 +163,14 @@ class StereoDepthHelper {
     * @param {{data:number[], offset:{x:number, y:number}}} needleChunk
     * @param {Uint8Array} haystackPixelArray
     * @param {{width:number, height:number}} dimensions
+    * @param {number} chunkSamplingStep
     * @returns {Promise<{x:number, y:number}>}
     */
    static async getBestNeedleChunkFit(
       needleChunk,
       haystackPixelArray,
-      dimensions
+      dimensions,
+      chunkSamplingStep
    ) {
       return new Promise((resolve) => {
          setTimeout(() => {
@@ -182,8 +185,16 @@ class StereoDepthHelper {
                for (let y = needleChunkSize; y < dimensions.height; y++) {
                   let aberrance = 0;
 
-                  for (let xc = 0; xc < needleChunkSize; xc += 10) {
-                     for (let yc = 0; yc < needleChunkSize; yc += 10) {
+                  for (
+                     let xc = 0;
+                     xc < needleChunkSize;
+                     xc += chunkSamplingStep
+                  ) {
+                     for (
+                        let yc = 0;
+                        yc < needleChunkSize;
+                        yc += chunkSamplingStep
+                     ) {
                         const xCoordinate = x + xc - chunkOffset;
                         const yCoordinate = y + yc - chunkOffset;
 
